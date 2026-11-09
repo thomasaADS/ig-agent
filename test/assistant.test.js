@@ -17,7 +17,7 @@ function script(...responses) {
   route('api.anthropic.com', () => responses[Math.min(i++, responses.length - 1)]);
 }
 
-test('NOVA looks things up with read-only tools and answers from the result', async () => {
+test('the assistant looks things up with read-only tools and answers from the result', async () => {
   resetMock();
   route(/user-n1\?/, () => ({ username: 'dana' }));
   await inbox.processWebhook(dmEvent({ from: 'user-n1', text: 'יש עוד מקום בסדנה?' }));
@@ -33,7 +33,7 @@ test('NOVA looks things up with read-only tools and answers from the result', as
 
   const [first, second] = callsTo('api.anthropic.com').map((c) => c.body);
   assert.ok(first.tools.length >= 8 && first.tools.every((t) => t.input_schema && !t.run));
-  assert.match(JSON.stringify(first.system), /NOVA/);
+  assert.match(JSON.stringify(first.system), /You are VEGA,/);
   // Both tool results go back in ONE user message, after the full assistant turn.
   assert.equal(second.messages.at(-2).role, 'assistant');
   const results = second.messages.at(-1).content;
@@ -42,7 +42,7 @@ test('NOVA looks things up with read-only tools and answers from the result', as
   assert.deepEqual([leads[0].username, leads[0].waiting_for_reply, leads[0].last_message.text], ['dana', true, 'יש עוד מקום בסדנה?']);
 });
 
-test('NOVA has no tool that can send, approve, publish or change anything', async () => {
+test('the assistant has no tool that can send, approve, publish or change anything', async () => {
   resetMock();
   script(msg([{ type: 'tool_use', id: 'x', name: 'send_dm', input: { thread_id: 'user-n1', text: 'hi' } }], 'tool_use'), msg([{ type: 'text', text: 'את זה עושים בטלגרם.' }]));
   const before = db.prepare('SELECT COUNT(*) AS n FROM messages').get().n;
@@ -56,7 +56,7 @@ test('NOVA has no tool that can send, approve, publish or change anything', asyn
   assert.equal(names.some((n) => /send|approve|publish|schedule|update|create|delete|hide|set_/.test(n)), false);
 });
 
-test('NOVA: tool loop is bounded, input is validated, requests are rate limited', async () => {
+test('the assistant: tool loop is bounded, input is validated, requests are rate limited', async () => {
   resetMock();
   assistant._resetRateLimit();
   script(msg([{ type: 'tool_use', id: 'loop', name: 'get_overview', input: {} }], 'tool_use'));
@@ -97,6 +97,10 @@ test('assistant endpoint sits behind the dashboard secret', async (t) => {
   assert.equal(callsTo('api.anthropic.com').length, 0);
   const ok = await post('/dash/dash-secret/assistant', { messages: [{ role: 'user', text: 'היי' }] });
   assert.equal(ok.status, 200);
-  assert.deepEqual(JSON.parse(ok.body), { name: 'NOVA', reply: 'שלום', tools_used: [] });
+  assert.deepEqual(JSON.parse(ok.body), { name: 'VEGA', reply: 'שלום', tools_used: [] });
   assert.equal((await post('/dash/dash-secret/assistant', { messages: [] })).status, 429);
+
+  // The configured name is what the page shows; no template placeholder leaks.
+  const page = await new Promise((resolve) => http.get(`http://127.0.0.1:${server.address().port}/dash/dash-secret/`, (r) => { let b = ''; r.on('data', (x) => (b += x)); r.on('end', () => resolve(b)); }));
+  assert.ok(page.includes('VEGA') && !page.includes('{{ASSISTANT}}'));
 });

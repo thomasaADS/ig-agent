@@ -187,7 +187,7 @@
   .d-foot { padding: 13px 22px; border-top: 1px solid rgba(255, 255, 255, .07); font-size: 12px; color: var(--dim); }
 
 
-  /* ---- NOVA assistant ---- */
+  /* ---- assistant ---- */
   .nova-fab { position: fixed; inset: auto auto 22px 22px; z-index: 30; width: 68px; height: 68px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .18); background: radial-gradient(circle at 50% 50%, rgba(129, 140, 248, .35), rgba(5, 6, 13, .9) 70%); cursor: pointer; padding: 0; box-shadow: 0 0 0 0 rgba(129, 140, 248, .6), 0 18px 50px rgba(0, 0, 0, .6); animation: beacon 3.2s ease-out infinite; transition: transform .25s ease; }
   .nova-fab:hover { transform: scale(1.08); }
   .nova-fab img, .nova-ava img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; transform: scale(1.28); -webkit-mask-image: radial-gradient(circle, #000 48%, transparent 66%); mask-image: radial-gradient(circle, #000 48%, transparent 66%); }
@@ -261,8 +261,8 @@
 </div>
 <div id="backdrop" class="backdrop"></div>
 <aside id="drawer" class="drawer" role="dialog" aria-modal="true" aria-label="פרטי ליד"></aside>
-<section id="nova" class="nova" role="dialog" aria-label="NOVA, העוזרת האישית"></section>
-<button id="nova-fab" class="nova-fab" type="button" aria-label="פתח את NOVA, העוזרת האישית"><img src="assets/orb.webp" alt=""><span class="tip">דבר עם NOVA</span></button>
+<section id="nova" class="nova" role="dialog" aria-label="{{ASSISTANT}}, העוזרת האישית"></section>
+<button id="nova-fab" class="nova-fab" type="button" aria-label="פתח את {{ASSISTANT}}, העוזרת האישית"><img src="assets/orb.webp" alt=""><span class="tip">דבר עם {{ASSISTANT}}</span></button>
 <script>
 (() => {
   // Everything is rendered with textContent, so message text can never inject HTML.
@@ -522,7 +522,7 @@
     box.scrollTop = keepScroll ?? box.scrollHeight;
   }
 
-  // ---------- NOVA: the built-in assistant ----------
+  // ---------- the built-in assistant ----------
   const nova = document.getElementById('nova'), fab = document.getElementById('nova-fab');
   const KEY = 'nova-chat';
   let chat = [];
@@ -532,17 +532,17 @@
 
   const logEl = h('div', { class: 'nova-log', 'aria-live': 'polite' });
   const chipsEl = h('div', { class: 'nova-chips' });
-  const input = h('textarea', { rows: '1', placeholder: 'שאל את NOVA משהו…', 'aria-label': 'הודעה ל-NOVA', maxlength: '2000' });
+  const input = h('textarea', { rows: '1', placeholder: 'שאל את {{ASSISTANT}} משהו…', 'aria-label': 'הודעה ל-{{ASSISTANT}}', maxlength: '2000' });
   const sendBtn = h('button', { class: 'nova-send', type: 'submit', 'aria-label': 'שלח' }, '↑');
   const form = h('form', { class: 'nova-form' }, input, sendBtn);
   const closeNova = h('button', { class: 'x', type: 'button', 'aria-label': 'סגור' }, '✕');
   nova.append(
     h('div', { class: 'nova-head' }, h('div', { class: 'nova-ava' }, h('img', { src: 'assets/orb.webp', alt: '' })),
-      h('div', null, h('div', { class: 'nova-name' }, 'NOVA'), h('div', { class: 'nova-sub' }, h('i', { class: 'pulse' }), 'העוזרת האישית שלך · מחוברת')), closeNova),
-    logEl, chipsEl, form, h('div', { class: 'nova-note' }, 'NOVA רואה את הנתונים ועוזרת לנסח. שליחה ואישור נשארים בטלגרם.'));
+      h('div', null, h('div', { class: 'nova-name' }, '{{ASSISTANT}}'), h('div', { class: 'nova-sub' }, h('i', { class: 'pulse' }), 'העוזרת האישית שלך · מחוברת')), closeNova),
+    logEl, chipsEl, form, h('div', { class: 'nova-note' }, '{{ASSISTANT}} רואה את הנתונים ועוזרת לנסח. שליחה ואישור נשארים בטלגרם.'));
 
   function paintChat() {
-    const greeting = h('div', { class: 'msg bot' }, 'היי, אני NOVA. אני מכירה את כל מה שקורה בחשבון: מי מחכה לתשובה, איך היה היום, מה מתוזמן ואיך הקמפיינים. מה תרצה לדעת?');
+    const greeting = h('div', { class: 'msg bot' }, 'היי, אני {{ASSISTANT}}. אני מכירה את כל מה שקורה בחשבון: מי מחכה לתשובה, איך היה היום, מה מתוזמן ואיך הקמפיינים. מה תרצה לדעת?');
     logEl.replaceChildren(greeting, ...chat.map((m) => h('div', { class: 'msg ' + (m.role === 'user' ? 'me' : m.error ? 'err' : 'bot') }, m.text)));
     if (busy) logEl.append(h('div', { class: 'typing' }, h('i'), h('i'), h('i')));
     chipsEl.replaceChildren(...(chat.length ? [] : SUGGEST.map((s) => { const b = h('button', { type: 'button' }, s); b.addEventListener('click', () => sendNova(s)); return b; })));
@@ -561,7 +561,7 @@
       if (!res.ok) throw new Error(body.error || 'שגיאה');
       chat.push({ role: 'assistant', text: body.reply });
     } catch (e) {
-      chat.push({ role: 'assistant', text: e.message || 'NOVA לא זמינה כרגע.', error: true });
+      chat.push({ role: 'assistant', text: e.message || '{{ASSISTANT}} לא זמינה כרגע.', error: true });
     }
     busy = false;
     chat = chat.slice(-40);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.1 - 2026-11-10
+
+### Changed
+- The dashboard assistant is now called **VEGA** (was NOVA), and the name is
+  configurable with `ASSISTANT_NAME`. Entries below still say NOVA where they
+  describe that release.
+
 ## 1.5.0 - 2026-11-10
 
 ### Added

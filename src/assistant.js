@@ -1,4 +1,4 @@
-// NOVA: the owner's in-dashboard assistant. It can look things up and draft
+// The owner's in-dashboard assistant (named by ASSISTANT_NAME, default VEGA). It can look things up and draft
 // text, but every tool here is read-only - sending, approving and publishing
 // stay in Telegram and MCP, so the dashboard link still cannot act.
 import fs from 'node:fs';
@@ -10,7 +10,7 @@ import * as stats from './stats.js';
 import { listCampaigns } from './campaigns.js';
 import { listScheduled } from './scheduler.js';
 
-export const ASSISTANT_NAME = 'NOVA';
+export const ASSISTANT_NAME = config.assistantName;
 const MAX_TURNS = 6; // model calls per question (tool loop)
 const MAX_HISTORY = 16;
 const MAX_INPUT = 2000;

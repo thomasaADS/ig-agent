@@ -38,6 +38,8 @@ export const config = {
   telegramChatId: env.TELEGRAM_CHAT_ID || '',
 
   mcpSecret: env.MCP_SECRET || '',
+  // Name of the assistant inside the dashboard (letters, digits, spaces; max 20).
+  assistantName: (env.ASSISTANT_NAME || '').replace(/[^\p{L}\p{N} ]/gu, '').trim().slice(0, 20) || 'VEGA',
   // Read-only web dashboard at /dash/<secret>. Empty = dashboard disabled.
   dashboardSecret: env.DASHBOARD_SECRET || '',
 

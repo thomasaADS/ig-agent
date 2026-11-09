@@ -148,7 +148,7 @@ dashboardRouter.use('/:secret/assets', express.static(path.join(HERE, 'assets'),
 
 dashboardRouter.get('/:secret/data.json', (_req, res) => res.json(dashboardData()));
 
-// NOVA, the in-dashboard assistant (read-only tools; see assistant.js).
+// The in-dashboard assistant (read-only tools; see assistant.js).
 dashboardRouter.post('/:secret/assistant', express.json({ limit: '200kb' }), async (req, res) => {
   try {
     res.json({ name: ASSISTANT_NAME, ...(await ask(req.body?.messages)) });
@@ -179,5 +179,6 @@ dashboardRouter.get('/:secret/thread/:id.json', (req, res) => {
 dashboardRouter.get('/:secret', (req, res) => {
   // Relative fetch("data.json") needs the trailing slash.
   if (!req.originalUrl.split('?')[0].endsWith('/')) return res.redirect(302, `${req.baseUrl}/${encodeURIComponent(req.params.secret)}/`);
-  res.type('html').send(fs.readFileSync(HTML_PATH, 'utf8'));
+  // The assistant's name is configurable; it is sanitised to letters/digits in config.js.
+  res.type('html').send(fs.readFileSync(HTML_PATH, 'utf8').replaceAll('{{ASSISTANT}}', ASSISTANT_NAME));
 });
