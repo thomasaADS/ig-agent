@@ -115,6 +115,50 @@ const migrations = [
       CREATE INDEX IF NOT EXISTS idx_sched_due ON scheduled_posts(status, run_at);
     `);
   },
+  // 4: leads, comment->DM campaigns, daily insights snapshots
+  () => {
+    addColumn('threads', 'stage', "TEXT NOT NULL DEFAULT 'new'");
+    addColumn('threads', 'tags', 'TEXT');
+    addColumn('threads', 'notes', 'TEXT');
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS campaigns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        media_id TEXT,
+        keywords TEXT NOT NULL,
+        match TEXT NOT NULL DEFAULT 'word',
+        dm_text TEXT NOT NULL,
+        link_url TEXT,
+        public_reply TEXT,
+        status TEXT NOT NULL DEFAULT 'draft',
+        approved_at INTEGER,
+        tg_message_id INTEGER,
+        created_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS campaign_sends (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        campaign_id INTEGER NOT NULL,
+        comment_id TEXT NOT NULL UNIQUE,
+        from_id TEXT,
+        username TEXT,
+        token TEXT UNIQUE,
+        status TEXT NOT NULL DEFAULT 'queued',
+        reason TEXT,
+        clicks INTEGER NOT NULL DEFAULT 0,
+        first_click_at INTEGER,
+        created_at INTEGER NOT NULL,
+        sent_at INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_sends_status ON campaign_sends(status, created_at);
+      CREATE INDEX IF NOT EXISTS idx_sends_campaign ON campaign_sends(campaign_id);
+      CREATE TABLE IF NOT EXISTS insights_daily (
+        day TEXT PRIMARY KEY,
+        followers INTEGER,
+        data TEXT,
+        fetched_at INTEGER
+      );
+    `);
+  },
 ];
 
 function addColumn(table, column, decl) {

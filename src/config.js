@@ -38,10 +38,16 @@ export const config = {
   telegramChatId: env.TELEGRAM_CHAT_ID || '',
 
   mcpSecret: env.MCP_SECRET || '',
+  // Read-only web dashboard at /dash/<secret>. Empty = dashboard disabled.
+  dashboardSecret: env.DASHBOARD_SECRET || '',
 
   autoSendDm: bool(env.AUTO_SEND_DM),
   autoSendComments: bool(env.AUTO_SEND_COMMENTS),
   autoSendMaxPerThread: int(env.AUTO_SEND_MAX_PER_THREAD, 3),
+  // Comment -> DM campaigns: cap on private replies per hour (Meta's own cap is higher).
+  campaignMaxPerHour: int(env.CAMPAIGN_MAX_PER_HOUR, 100),
+  // Hour (Asia/Jerusalem) of the daily Telegram summary; -1 disables it.
+  dailySummaryHour: int(env.DAILY_SUMMARY_HOUR, 21),
 
   debounceMs: int(env.DEBOUNCE_SECONDS, 45) * 1000,
   pollIntervalMs: int(env.POLL_INTERVAL_SECONDS, 120) * 1000,

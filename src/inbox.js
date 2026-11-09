@@ -6,6 +6,7 @@ import * as ig from './instagram.js';
 import { PLACEHOLDERS, resolveThreadId, upsertThread, getThread, recordMessage } from './store.js';
 import * as agent from './agent.js';
 import { notify } from './telegram.js';
+import * as campaigns from './campaigns.js';
 
 // ---------- webhook verification ----------
 
@@ -146,8 +147,18 @@ async function processCommentChange(value, entryTime) {
   });
   if (isNew) {
     await ensureCaption(value.media?.id);
-    await agent.handleNewComment(value.id);
+    await onFreshComment(value.id);
   }
+}
+
+// A campaign keyword wins over an AI reply draft for the same comment.
+async function onFreshComment(commentId) {
+  const comment = db.prepare('SELECT * FROM comments WHERE id = ?').get(commentId);
+  if (campaigns.enqueue(comment)) {
+    campaigns.processQueue().catch((e) => log('campaign queue error:', safeErr(e)));
+    return;
+  }
+  await agent.handleNewComment(commentId);
 }
 
 export async function processWebhook(payload) {
@@ -304,7 +315,7 @@ export async function syncComments() {
       });
       if (isNew) {
         added++;
-        await agent.handleNewComment(c.id);
+        await onFreshComment(c.id);
       } else if (wasNew && replied) {
         await agent.closeCommentDrafts(c.id); // the owner replied in the app
       }

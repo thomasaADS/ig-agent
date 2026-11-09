@@ -7,6 +7,8 @@ import { getThread, getDraft, getComment, threadMessages, windowRemaining, pendi
 import * as agent from './agent.js';
 import * as media from './media.js';
 import { listScheduled } from './scheduler.js';
+import * as campaigns from './campaigns.js';
+import { summaryText, snapshotInsights } from './stats.js';
 
 export const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 export const who = (t) => (t?.username ? `@${esc(t.username)}` : esc(t?.name || t?.id || '?'));
@@ -242,6 +244,8 @@ function statusText() {
 const HELP = [
   '<b>פקודות</b>',
   '/status – מצב המערכת',
+  '/today – סיכום היום (הודעות, תגובות, פרסומים, עוקבים)',
+  '/campaigns – קמפיינים של תגובה → הודעה פרטית',
   '/pending – טיוטות שממתינות לאישור',
   '/queue – פוסטים מתוזמנים',
   '/pause – עצירת כל השליחות והטיוטות',
@@ -258,6 +262,27 @@ async function onCommand(cmd, arg, msg) {
       return notify(HELP);
     case '/status':
       return notify(statusText());
+    case '/today':
+      await snapshotInsights({ maxAgeMs: 10 * 60_000 });
+      return notify(summaryText());
+    case '/campaigns': {
+      const list = campaigns.listCampaigns();
+      if (!list.length) return notify('אין קמפיינים. יוצרים אותם דרך הצ׳אט של Claude ("צור קמפיין: מי שמגיב לינק מקבל…").');
+      const label = { active: '🟢 פעיל', paused: '⏸ מושהה', draft: '📝 ממתין לאישור' };
+      for (const c of list.slice(0, 10)) {
+        const buttons =
+          c.status === 'draft'
+            ? campaigns.cardFor(c.id).keyboard
+            : [[c.status === 'active' ? { text: 'השהה ⏸', callback_data: `c:pause:${c.id}` } : { text: 'הפעל ▶️', callback_data: `c:resume:${c.id}` }]];
+        await notify(
+          `🎯 <b>#${c.id} ${esc(c.name)}</b> · ${label[c.status] || c.status}\n` +
+            `מילים: ${esc(c.keywords.join(', '))}\n` +
+            `נשלחו ${c.sent} · בתור ${c.queued} · קליקים ${c.clicked}${c.ctr != null ? ` (${c.ctr}%)` : ''}${c.failed ? ` · נכשלו ${c.failed}` : ''}`,
+          { reply_markup: { inline_keyboard: buttons } },
+        );
+      }
+      return null;
+    }
     case '/pending': {
       const drafts = pendingDrafts().slice(0, 10);
       if (!drafts.length) return notify('אין טיוטות ממתינות 🎉');
@@ -378,6 +403,22 @@ async function onCallback(q) {
         await tg('answerCallbackQuery', { callback_query_id: q.id, text: 'מנסח מחדש…' }).catch(() => {});
         await agent.regenerateDraft(id);
         return;
+      }
+    } else if (scope === 'c') {
+      const id = Number(ref);
+      if (action === 'on') {
+        campaigns.approveCampaign(id);
+        await editCard(q.message.message_id, `${campaigns.cardFor(id).text}\n\n— <b>פעיל 🟢</b>`);
+        campaigns.processQueue().catch(() => {});
+        answer = 'הקמפיין פעיל';
+      } else if (action === 'del') {
+        campaigns.setStatus(id, 'deleted');
+        await editCard(q.message.message_id, `${campaigns.cardFor(id).text}\n\n— <b>נמחק</b>`);
+        answer = 'נמחק';
+      } else if (action === 'pause' || action === 'resume') {
+        campaigns.setStatus(id, action === 'pause' ? 'paused' : 'active');
+        answer = action === 'pause' ? 'הקמפיין הושהה' : 'הקמפיין פעיל';
+        if (action === 'resume') campaigns.processQueue().catch(() => {});
       }
     } else if (scope === 'm') {
       if (action !== 'keep') await tg('answerCallbackQuery', { callback_query_id: q.id, text: 'מפרסם…' }).catch(() => {});

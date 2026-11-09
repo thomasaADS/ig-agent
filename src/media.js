@@ -250,6 +250,11 @@ export async function publishMedia({ type, ids, caption }) {
   if (isPaused()) throw new UserError('הסוכן מושהה (/resume כדי להפעיל מחדש). לא פורסם דבר.');
   const rows = resolveMedia(ids, type);
   const text = caption ?? rows[0].caption ?? '';
+  // Instagram's rolling 24h publishing quota. Unknown / failed lookup never blocks.
+  const quota = await ig.publishingLimit().catch(() => null);
+  if (quota?.limit && quota.used >= quota.limit) {
+    throw new UserError(`הגעת למכסת הפרסום של אינסטגרם (${quota.used}/${quota.limit} ב-24 שעות). נסה שוב מאוחר יותר.`);
+  }
   const result = await ig.publish({
     type,
     caption: type === 'story' ? undefined : text,

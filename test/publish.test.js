@@ -27,6 +27,7 @@ function mockPublish({ failTimes = 0 } = {}) {
   route(/\/container-\d+\?/, () => ({ status_code: 'FINISHED' }));
   route('/me/media_publish', () => (failures-- > 0 ? json({ error: { message: 'publish failed', code: 9007 } }, 400) : { id: 'published-1' }));
   route('/published-1?', () => ({ permalink: 'https://www.instagram.com/p/abc/' }));
+  route('content_publishing_limit', () => ({ data: [{ quota_usage: 3, config: { quota_total: 100 } }] }));
 }
 
 test('images are converted to JPEG, EXIF is stripped, the file is served from an unguessable name', async () => {
@@ -74,10 +75,19 @@ test('publish container flow: create -> wait for FINISHED -> publish -> permalin
 
   assert.deepEqual(res, { id: 'published-1', permalink: 'https://www.instagram.com/p/abc/' });
   const order = calls.filter((c) => c.url.includes('graph.instagram.com')).map((c) => `${c.method} ${new URL(c.url).pathname.split('/').slice(2).join('/')}`);
-  assert.deepEqual(order, ['POST me/media', 'GET container-1', 'GET container-1', 'GET container-1', 'POST me/media_publish', 'GET published-1']);
+  assert.deepEqual(order, ['GET me/content_publishing_limit', 'POST me/media', 'GET container-1', 'GET container-1', 'GET container-1', 'POST me/media_publish', 'GET published-1']);
   assert.deepEqual(callsTo(/\/me\/media$/)[0].body, { image_url: media.mediaUrl(row), caption: 'כיתוב' });
   assert.deepEqual(callsTo('media_publish')[0].body, { creation_id: 'container-1' });
   assert.equal(media.getMedia(row.id).status, 'published');
+});
+
+test('publishing quota: a full 24h quota blocks the publish with a clear message', async () => {
+  resetMock();
+  mockPublish();
+  route('content_publishing_limit', () => ({ data: [{ quota_usage: 100, config: { quota_total: 100 } }] }));
+  const row = await media.saveUpload(await image(1080, 1080), {});
+  await assert.rejects(media.publishMedia({ type: 'image', ids: [row.id] }), /מכסת הפרסום/);
+  assert.equal(callsTo(/\/me\/media$/).length, 0);
 });
 
 test('carousel: one child container per item, then the parent with children ids', async () => {

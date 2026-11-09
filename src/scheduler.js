@@ -7,6 +7,8 @@ import { db, getSetting, setSetting, isPaused } from './db.js';
 import * as ig from './instagram.js';
 import { publishMedia, resolveMedia, cleanupMedia } from './media.js';
 import { notify, esc } from './telegram.js';
+import * as campaigns from './campaigns.js';
+import { snapshotInsights, summaryText } from './stats.js';
 
 const MAX_ATTEMPTS = 3; // first try + two retries
 const RETRY_DELAY_MS = 5 * 60_000;
@@ -136,6 +138,16 @@ async function nightly() {
   }
 }
 
+// One Telegram summary per day, at DAILY_SUMMARY_HOUR (Jerusalem).
+async function dailySummary() {
+  if (config.dailySummaryHour < 0 || localHour() < config.dailySummaryHour) return;
+  const today = localDay();
+  if (getSetting('last_summary') === today) return;
+  setSetting('last_summary', today);
+  await snapshotInsights({ maxAgeMs: 10 * 60_000 });
+  await notify(summaryText(today));
+}
+
 // ---------- tick ----------
 
 let timer = null;
@@ -146,7 +158,10 @@ export async function tick() {
   ticking = true;
   try {
     await runDuePosts();
+    await campaigns.processQueue();
     await nightly();
+    await snapshotInsights();
+    await dailySummary();
     await ig.refreshTokenIfNeeded().catch((e) => log('token refresh failed:', safeErr(e)));
     const days = ig.tokenDaysLeft();
     if (days != null && days <= 5 && getSetting('token_low_alert') !== localDay()) {

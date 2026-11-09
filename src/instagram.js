@@ -9,6 +9,7 @@ const SCOPES = [
   'instagram_business_manage_messages',
   'instagram_business_manage_comments',
   'instagram_business_content_publish',
+  'instagram_business_manage_insights',
 ].join(',');
 
 const STATE_TTL_MS = 10 * 60_000;
@@ -324,3 +325,59 @@ export async function publish({ type, media, caption }) {
 export const userProfile = (id) => api(`/${id}`, { params: { fields: 'name,username' } });
 
 export const mediaInfo = (id) => api(`/${id}`, { params: { fields: 'id,caption,permalink,timestamp,comments_count' } });
+
+// ---------- insights ----------
+
+export const profile = () => api('/me', { params: { fields: 'username,followers_count,follows_count,media_count' } });
+
+// Requests several metrics at once; if Instagram rejects the set (one unknown
+// metric fails the whole call) it retries one by one and keeps what works.
+async function insights(path, metrics, params) {
+  const read = (res) =>
+    Object.fromEntries((res.data || []).map((d) => [d.name, d.total_value?.value ?? d.values?.at(-1)?.value ?? null]));
+  try {
+    return read(await api(path, { params: { ...params, metric: metrics.join(',') } }));
+  } catch (e) {
+    if (e.code === 190 || e.status === 401) throw e;
+    const out = {};
+    for (const metric of metrics) {
+      try {
+        Object.assign(out, read(await api(path, { params: { ...params, metric } })));
+      } catch {
+        // metric not available for this account / media type
+      }
+    }
+    return out;
+  }
+}
+
+const ACCOUNT_METRICS = ['reach', 'views', 'accounts_engaged', 'total_interactions', 'likes', 'comments', 'shares', 'saves', 'profile_links_taps'];
+const MEDIA_METRICS = ['reach', 'views', 'likes', 'comments', 'shares', 'saved', 'total_interactions'];
+
+export const accountInsights = (sinceMs, untilMs) =>
+  insights('/me/insights', ACCOUNT_METRICS, {
+    period: 'day',
+    metric_type: 'total_value',
+    since: Math.floor(sinceMs / 1000),
+    until: Math.floor(untilMs / 1000),
+  });
+
+export const mediaInsights = (mediaId) => insights(`/${mediaId}/insights`, MEDIA_METRICS, {});
+
+// { used, limit } for the rolling 24h publishing quota, or null when unknown.
+export async function publishingLimit() {
+  const res = await api('/me/content_publishing_limit', { params: { fields: 'quota_usage,config' } });
+  const row = res.data?.[0];
+  if (!row) return null;
+  return { used: row.quota_usage ?? 0, limit: row.config?.quota_total ?? null };
+}
+
+// ---------- comment moderation & private replies ----------
+
+export const hideComment = (commentId, hide = true) => api(`/${commentId}`, { method: 'POST', body: { hide } });
+
+// One DM to the author of a comment (Meta allows exactly one, within 7 days).
+export async function privateReply(commentId, text) {
+  const res = await api('/me/messages', { method: 'POST', body: { recipient: { comment_id: commentId }, message: { text } } });
+  return res.message_id || null;
+}

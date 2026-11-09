@@ -89,6 +89,27 @@ export function windowRemaining(thread, now = Date.now()) {
   return thread.last_incoming_at + WINDOW_MS - now;
 }
 
+export const STAGES = ['new', 'interested', 'customer', 'vip', 'spam'];
+export const parseTags = (t) => {
+  try {
+    return JSON.parse(t?.tags || '[]');
+  } catch {
+    return [];
+  }
+};
+
+// Lead card: what the owner knows about this person. Fed into drafts as trusted notes.
+export function updateLead(threadId, { stage, tags, notes } = {}) {
+  if (!getThread(threadId)) return null;
+  if (stage != null) db.prepare('UPDATE threads SET stage = ? WHERE id = ?').run(stage, threadId);
+  if (tags != null) {
+    const clean = [...new Set(tags.map((t) => String(t).trim()).filter(Boolean))].slice(0, 12);
+    db.prepare('UPDATE threads SET tags = ? WHERE id = ?').run(JSON.stringify(clean), threadId);
+  }
+  if (notes != null) db.prepare('UPDATE threads SET notes = ? WHERE id = ?').run(String(notes).slice(0, 2000), threadId);
+  return getThread(threadId);
+}
+
 export const getDraft = (id) => db.prepare('SELECT * FROM drafts WHERE id = ?').get(id);
 export const getComment = (id) => db.prepare('SELECT * FROM comments WHERE id = ?').get(id);
 export const pendingDrafts = () => db.prepare("SELECT * FROM drafts WHERE status = 'pending' ORDER BY created_at").all();

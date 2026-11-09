@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>IG Agent · לוח בקרה</title>
+<style>
+  :root {
+    --bg: #0a0c16; --panel: #131727; --panel-2: #181d31; --line: #242b47;
+    --text: #eef1ff; --muted: #8b93b8; --dim: #5b6388;
+    --pink: #ff3d77; --orange: #ff8a3d; --purple: #a855f7;
+    --green: #2be3a0; --yellow: #ffc857; --red: #ff5c7a; --blue: #4da3ff;
+    --grad: linear-gradient(120deg, var(--pink), var(--orange) 55%, var(--purple));
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; color: var(--text); background:
+      radial-gradient(900px 420px at 85% -10%, rgba(255, 61, 119, .16), transparent 60%),
+      radial-gradient(700px 380px at 5% 0%, rgba(168, 85, 247, .14), transparent 60%), var(--bg);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", "Heebo", "Arial Hebrew", Arial, sans-serif;
+    min-height: 100vh; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 16px 60px; }
+  h2 { font-size: 13px; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  h2 .count { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 1px 9px; font-size: 12px; letter-spacing: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .grid { display: grid; gap: 14px; }
+  .num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+  .muted { color: var(--muted); } .dim { color: var(--dim); }
+  .empty { color: var(--dim); text-align: center; padding: 18px 0; font-size: 14px; }
+
+  /* ---- hero ---- */
+  .hero { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--grad); }
+  .who { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .avatar { width: 58px; height: 58px; border-radius: 50%; background: var(--grad); display: grid; place-items: center; font-size: 24px; font-weight: 800; flex: none; box-shadow: 0 0 0 3px var(--panel), 0 0 0 5px rgba(255, 61, 119, .45); }
+  .name { font-size: 22px; font-weight: 800; direction: ltr; unicode-bidi: isolate; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { color: var(--green); border-color: rgba(43, 227, 160, .35); background: rgba(43, 227, 160, .08); }
+  .pill.warn { color: var(--yellow); border-color: rgba(255, 200, 87, .35); background: rgba(255, 200, 87, .08); }
+  .pill.bad { color: var(--red); border-color: rgba(255, 92, 122, .4); background: rgba(255, 92, 122, .08); }
+  .level { display: flex; align-items: center; gap: 16px; }
+  .ring { position: relative; width: 84px; height: 84px; flex: none; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring .lv { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; line-height: 1.05; }
+  .ring .lv b { font-size: 26px; font-weight: 800; display: block; }
+  .ring .lv span { font-size: 10px; color: var(--muted); letter-spacing: .1em; }
+  .xp { min-width: 190px; }
+  .xp .bar { height: 8px; border-radius: 999px; background: var(--panel-2); overflow: hidden; margin: 6px 0 4px; border: 1px solid var(--line); }
+  .xp .bar i { display: block; height: 100%; background: var(--grad); border-radius: 999px; transition: width .6s ease; }
+  .streak { font-weight: 800; font-size: 15px; }
+  .streak small { font-weight: 500; color: var(--muted); }
+
+  /* ---- missions ---- */
+  .missions { grid-template-columns: repeat(3, 1fr); margin-top: 14px; }
+  .mission { display: flex; gap: 12px; align-items: center; padding: 14px 16px; }
+  .mission .tick { width: 34px; height: 34px; border-radius: 50%; border: 2px dashed var(--line); display: grid; place-items: center; flex: none; font-size: 16px; color: var(--dim); }
+  .mission.done { border-color: rgba(43, 227, 160, .35); background: linear-gradient(180deg, rgba(43, 227, 160, .07), var(--panel)); }
+  .mission.done .tick { border: 0; background: var(--green); color: #06281c; font-weight: 900; }
+  .mission b { display: block; font-size: 15px; }
+  .mission small { color: var(--muted); }
+
+  /* ---- kpis ---- */
+  .kpis { grid-template-columns: repeat(6, 1fr); margin-top: 14px; }
+  .kpi { padding: 14px 16px; }
+  .kpi .label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .kpi .value { font-size: 30px; font-weight: 800; line-height: 1.15; margin-top: 2px; }
+  .kpi .delta { font-size: 12px; font-weight: 700; }
+  .up { color: var(--green); } .down { color: var(--red); } .flat { color: var(--dim); }
+
+  .cols { grid-template-columns: 1.25fr 1fr; margin-top: 14px; align-items: start; }
+  .stack { display: grid; gap: 14px; }
+
+  /* ---- chart ---- */
+  .chart { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; align-items: end; height: 150px; direction: ltr; }
+  .chart .day { display: grid; grid-template-rows: 1fr auto; height: 100%; gap: 5px; min-width: 0; }
+  .chart .bars { display: flex; gap: 3px; align-items: flex-end; height: 100%; }
+  .chart .bars i { flex: 1; border-radius: 4px 4px 1px 1px; min-height: 2px; }
+  .chart .in { background: linear-gradient(180deg, var(--purple), #6d3bd1); }
+  .chart .out { background: linear-gradient(180deg, var(--orange), var(--pink)); }
+  .chart .d { font-size: 10px; color: var(--dim); text-align: center; }
+  .chart .day.today .d { color: var(--text); font-weight: 700; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-inline-start: auto; font-weight: 500; letter-spacing: 0; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-inline-end: 5px; }
+
+  /* ---- lists ---- */
+  .item { padding: 12px 0; border-top: 1px solid var(--line); }
+  .item:first-of-type { border-top: 0; padding-top: 2px; }
+  .row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+  .handle { font-weight: 700; direction: ltr; unicode-bidi: isolate; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .quote { color: var(--muted); font-size: 14px; margin-top: 4px; overflow-wrap: anywhere; }
+  .draft { margin-top: 8px; background: var(--panel-2); border: 1px solid var(--line); border-inline-start: 3px solid var(--pink); border-radius: 10px; padding: 9px 12px; font-size: 14px; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .chip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .chip.interested { color: var(--yellow); } .chip.customer { color: var(--green); } .chip.vip { color: var(--pink); } .chip.spam { color: var(--red); }
+  .chip.timer { color: var(--blue); } .chip.timer.low { color: var(--red); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); flex: none; box-shadow: 0 0 0 4px rgba(255, 61, 119, .15); }
+  .meta { font-size: 12px; color: var(--dim); white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: start; font-size: 11px; color: var(--dim); font-weight: 700; padding: 0 0 8px; letter-spacing: .05em; }
+  td { padding: 9px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  td.n, th.n { text-align: end; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; font-size: 14px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: end; }
+  a { color: inherit; }
+  footer { margin-top: 22px; text-align: center; font-size: 12px; color: var(--dim); }
+  .banner { margin-bottom: 14px; padding: 12px 16px; border-radius: 14px; font-weight: 700; display: none; }
+  .banner.show { display: block; }
+  .banner.bad { background: rgba(255, 92, 122, .1); border: 1px solid rgba(255, 92, 122, .4); color: var(--red); }
+  .banner.warn { background: rgba(255, 200, 87, .08); border: 1px solid rgba(255, 200, 87, .35); color: var(--yellow); }
+
+  @media (max-width: 980px) { .kpis { grid-template-columns: repeat(3, 1fr); } .cols { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) {
+    .hero { grid-template-columns: 1fr; } .level { justify-content: space-between; }
+    .missions { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(2, 1fr); }
+    .kpi .value { font-size: 26px; } .xp { min-width: 0; flex: 1; }
+    .chart { gap: 3px; } .chart .day:nth-child(even):not(.today) .d { visibility: hidden; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="banner" class="banner"></div>
+  <div id="app"><div class="panel empty">טוען…</div></div>
+  <footer id="foot"></footer>
+</div>
+<script>
+(() => {
+  // Everything is rendered with textContent, so message text can never inject HTML.
+  const h = (tag, attrs, ...kids) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'style') el.style.cssText = v;
+      else el.setAttribute(k, v);
+    }
+    for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    return el;
+  };
+  const svg = (tag, attrs) => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    return el;
+  };
+  const n = (v) => (v == null ? '—' : Number(v).toLocaleString('en-US'));
+  const dur = (ms) => {
+    if (ms == null) return null;
+    const hrs = Math.floor(ms / 3600000), min = Math.floor((ms % 3600000) / 60000);
+    return hrs ? `${hrs} שע׳ ${min} דק׳` : `${min} דק׳`;
+  };
+  const STAGE = { new: 'חדש', interested: 'מתעניין', customer: 'לקוח', vip: 'VIP', spam: 'ספאם' };
+  const TYPE = { image: 'פוסט', story: 'סטורי', reel: 'ריל', carousel: 'קרוסלה' };
+  const CAMPAIGN = { active: ['פעיל', 'ok'], paused: ['מושהה', 'warn'], draft: ['ממתין לאישור', ''] };
+
+  const section = (title, count, ...body) =>
+    h('div', { class: 'panel' }, h('h2', null, title, count != null ? h('span', { class: 'count num' }, count) : null), ...body);
+
+  function hero(d) {
+    const g = d.game, a = d.account;
+    const span = Math.max(1, g.level_next - g.level_floor);
+    const pct = Math.min(1, (g.xp - g.level_floor) / span);
+    const R = 36, C = 2 * Math.PI * R;
+    const ring = svg('svg', { width: 84, height: 84, viewBox: '0 0 84 84' });
+    const defs = svg('defs', {}), grad = svg('linearGradient', { id: 'g', x1: 0, y1: 0, x2: 1, y2: 1 });
+    [['0', '#ff3d77'], ['.55', '#ff8a3d'], ['1', '#a855f7']].forEach(([o, c]) => grad.append(svg('stop', { offset: o, 'stop-color': c })));
+    defs.append(grad);
+    ring.append(defs, svg('circle', { cx: 42, cy: 42, r: R, fill: 'none', stroke: '#242b47', 'stroke-width': 7 }),
+      svg('circle', { cx: 42, cy: 42, r: R, fill: 'none', stroke: 'url(#g)', 'stroke-width': 7, 'stroke-linecap': 'round', 'stroke-dasharray': `${C * pct} ${C}` }));
+
+    const pills = [
+      a.connected ? h('span', { class: 'pill ok' }, '● מחובר') : h('span', { class: 'pill bad' }, '● לא מחובר'),
+      a.paused ? h('span', { class: 'pill warn' }, '⏸ מושהה') : h('span', { class: 'pill ok' }, '▶ פעיל'),
+      a.followers != null && h('span', { class: 'pill' }, h('span', { class: 'num' }, n(a.followers)), ' עוקבים'),
+      (d.health.auto_send_dm || d.health.auto_send_comments) && h('span', { class: 'pill warn' }, '🤖 שליחה אוטומטית דולקת'),
+    ];
+    return h('div', { class: 'panel hero' },
+      h('div', { class: 'who' },
+        h('div', { class: 'avatar' }, (a.username || '?').slice(0, 1).toUpperCase()),
+        h('div', { style: 'min-width:0' }, h('div', { class: 'name' }, a.username ? '@' + a.username : 'IG Agent'), h('div', { class: 'pills' }, pills))),
+      h('div', { class: 'level' },
+        h('div', { class: 'ring' }, ring, h('div', { class: 'lv' }, h('div', null, h('b', { class: 'num' }, g.level), h('span', null, 'רמה')))),
+        h('div', { class: 'xp' },
+          h('div', { class: 'streak' }, '🔥 ', h('span', { class: 'num' }, g.streak), ' ', h('small', null, g.streak === 1 ? 'יום ברצף' : 'ימים ברצף')),
+          h('div', { class: 'bar' }, h('i', { style: `width:${Math.round(pct * 100)}%` })),
+          h('div', { class: 'muted', style: 'font-size:12px' }, h('span', { class: 'num' }, `${n(g.xp)} / ${n(g.level_next)}`), ' נק׳ לרמה הבאה'))));
+  }
+
+  const missions = (d) => h('div', { class: 'grid missions' }, d.game.missions.map((m) =>
+    h('div', { class: 'panel mission' + (m.done ? ' done' : '') }, h('div', { class: 'tick' }, m.done ? '✓' : '○'), h('div', null, h('b', null, m.title), h('small', null, m.detail)))));
+
+  function kpi(label, value, prev) {
+    let delta = null;
+    if (prev != null && value != null) {
+      const diff = value - prev;
+      delta = h('div', { class: 'delta ' + (diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat') },
+        h('span', { class: 'num' }, diff > 0 ? `▲ ${n(diff)}` : diff < 0 ? `▼ ${n(-diff)}` : '—'), h('span', { class: 'dim', style: 'font-weight:500' }, ' מול אתמול'));
+    }
+    return h('div', { class: 'panel kpi' }, h('div', { class: 'label' }, label), h('div', { class: 'value num' }, n(value)), delta);
+  }
+  const kpis = (d) => h('div', { class: 'grid kpis' },
+    kpi('הודעות נכנסו', d.today.messages_in, d.yesterday.messages_in),
+    kpi('תשובות יצאו', d.today.replies_sent, d.yesterday.replies_sent),
+    kpi('תגובות חדשות', d.today.comments_in, d.yesterday.comments_in),
+    kpi('פורסמו', d.today.published, d.yesterday.published),
+    kpi('הודעות קמפיין', d.today.campaign_dms, d.yesterday.campaign_dms),
+    kpi('קליקים על קישור', d.today.campaign_clicks, d.yesterday.campaign_clicks));
+
+  function chart(d) {
+    const max = Math.max(1, ...d.series.map((s) => Math.max(s.messages_in, s.replies_sent)));
+    const days = d.series.map((s, i) => h('div', { class: 'day' + (i === d.series.length - 1 ? ' today' : ''), title: `${s.day}: ${s.messages_in} נכנסו, ${s.replies_sent} יצאו` },
+      h('div', { class: 'bars' }, h('i', { class: 'in', style: `height:${(s.messages_in / max) * 100}%` }), h('i', { class: 'out', style: `height:${(s.replies_sent / max) * 100}%` })),
+      h('div', { class: 'd' }, s.day.slice(8) + '/' + s.day.slice(5, 7))));
+    return h('div', { class: 'panel' },
+      h('h2', null, '14 ימים אחרונים', h('span', { class: 'legend' }, h('span', null, h('i', { style: 'background:#a855f7' }), 'נכנסו'), h('span', null, h('i', { style: 'background:#ff8a3d' }), 'יצאו'))),
+      h('div', { class: 'chart' }, days));
+  }
+
+  function pending(d) {
+    const items = d.pending.map((p) => h('div', { class: 'item' },
+      h('div', { class: 'row' },
+        h('div', { class: 'row', style: 'min-width:0;justify-content:flex-start' }, h('span', { class: 'chip' }, p.kind === 'dm' ? 'הודעה' : 'תגובה'), h('span', { class: 'handle' }, '@' + p.who)),
+        p.window_ms != null ? h('span', { class: 'chip timer' + (p.window_ms < 3 * 3600000 ? ' low' : '') }, '⏳ ' + dur(p.window_ms)) : h('span', { class: 'meta num' }, p.created)),
+      h('div', { class: 'quote' }, '“' + (p.incoming || '') + '”'),
+      h('div', { class: 'draft' }, p.draft)));
+    return section('מחכה לאישור שלך בטלגרם', d.pending.length, items.length ? items : h('div', { class: 'empty' }, '🎉 אין טיוטות שמחכות'));
+  }
+
+  function threads(d) {
+    const items = d.threads.map((t) => h('div', { class: 'item' },
+      h('div', { class: 'row' },
+        h('div', { class: 'row', style: 'min-width:0;justify-content:flex-start' },
+          t.waiting && h('span', { class: 'dot', title: 'מחכה לתשובה' }), h('span', { class: 'handle' }, '@' + t.who),
+          t.stage !== 'new' && h('span', { class: 'chip ' + t.stage }, STAGE[t.stage] || t.stage),
+          t.tags.slice(0, 2).map((x) => h('span', { class: 'chip' }, x))),
+        h('span', { class: 'meta num' }, (t.at || '').slice(5))),
+      h('div', { class: 'quote' }, (t.from_me ? 'אתה: ' : '') + (t.last || ''))));
+    return section('שיחות אחרונות', d.waiting_threads ? d.waiting_threads + ' מחכות' : null, items.length ? items : h('div', { class: 'empty' }, 'עוד אין שיחות'));
+  }
+
+  function campaigns(d) {
+    if (!d.campaigns.length) return section('קמפיינים · תגובה ← הודעה פרטית', null, h('div', { class: 'empty' }, 'אין קמפיינים. יוצרים דרך הצ׳אט של Claude ומאשרים בטלגרם.'));
+    const rows = d.campaigns.map((c) => {
+      const [label, cls] = CAMPAIGN[c.status] || [c.status, ''];
+      return h('tr', null,
+        h('td', null, h('b', null, c.name), h('div', { class: 'meta', style: 'white-space:normal' }, c.keywords.join(' · '))),
+        h('td', null, h('span', { class: 'pill ' + cls }, label)),
+        h('td', { class: 'n num' }, n(c.sent)), h('td', { class: 'n num' }, n(c.clicked)), h('td', { class: 'n num' }, c.ctr == null ? '—' : c.ctr + '%'));
+    });
+    return section('קמפיינים · תגובה ← הודעה פרטית', d.campaigns.length,
+      h('table', null, h('thead', null, h('tr', null, h('th', null, 'קמפיין'), h('th', null, 'מצב'), h('th', { class: 'n' }, 'נשלחו'), h('th', { class: 'n' }, 'הקליקו'), h('th', { class: 'n' }, 'CTR'))), h('tbody', null, rows)));
+  }
+
+  function scheduled(d) {
+    const items = d.scheduled.map((p) => h('div', { class: 'item' },
+      h('div', { class: 'row' }, h('div', { class: 'row', style: 'justify-content:flex-start' }, h('span', { class: 'chip' }, TYPE[p.type] || p.type), h('b', { class: 'num' }, p.run_at)), p.attempts ? h('span', { class: 'chip timer low' }, 'ניסיון ' + (p.attempts + 1)) : null),
+      p.caption && h('div', { class: 'quote' }, p.caption.slice(0, 110))));
+    const extra = d.unpublished_media ? h('div', { class: 'meta', style: 'margin-top:10px;white-space:normal' }, `${d.unpublished_media} קבצים הועלו ועדיין לא פורסמו`) : null;
+    return section('פוסטים מתוזמנים', d.scheduled.length, items.length ? items : h('div', { class: 'empty' }, 'אין פוסטים בתור'), extra);
+  }
+
+  function insights(d) {
+    const i = d.insights;
+    if (!i) return section('ביצועי החשבון · 24 שעות', null, h('div', { class: 'empty' }, 'אין עדיין נתונים מאינסטגרם'));
+    const rows = [['חשיפה (Reach)', i.reach], ['צפיות', i.views], ['חשבונות שהגיבו', i.accounts_engaged], ['אינטראקציות', i.total_interactions], ['לייקים', i.likes], ['שמירות', i.saves], ['שיתופים', i.shares]]
+      .filter(([, v]) => v != null);
+    const f = d.account;
+    const kv = h('dl', { class: 'kv' },
+      h('dt', null, 'עוקבים'), h('dd', null, f.followers_delta != null ? h('span', { class: 'num ' + (f.followers_delta > 0 ? 'up' : f.followers_delta < 0 ? 'down' : 'flat'), style: 'font-size:12px;font-weight:700;margin-inline-end:8px' }, `${f.followers_delta > 0 ? '+' : ''}${f.followers_delta}`) : null, ' ', h('b', { class: 'num' }, n(f.followers))),
+      rows.map(([k, v]) => [h('dt', null, k), h('dd', { class: 'num' }, h('b', null, n(v)))]));
+    return section('ביצועי החשבון · 24 שעות', null, kv);
+  }
+
+  function posts(d) {
+    if (!d.posts.length) return null;
+    return section('פוסטים אחרונים', null, d.posts.map((p) => h('div', { class: 'item' },
+      h('div', { class: 'row' }, h('span', { class: 'quote', style: 'margin:0;color:var(--text)' }, p.caption || '(ללא כיתוב)'), h('span', { class: 'chip num' }, '💬 ' + n(p.comments))),
+      h('div', { class: 'meta num' }, p.at || ''))));
+  }
+
+  function health(d) {
+    const x = d.health;
+    const tokenCls = x.token_days == null ? '' : x.token_days <= 5 ? 'down' : x.token_days <= 15 ? '' : 'up';
+    return section('מצב המערכת', null, h('dl', { class: 'kv' },
+      h('dt', null, 'תוקף הטוקן'), h('dd', { class: tokenCls }, x.token_days == null ? '—' : h('span', null, h('span', { class: 'num' }, x.token_days), ' ימים')),
+      h('dt', null, 'סנכרון אחרון'), h('dd', { class: 'num' }, x.last_poll || '—'),
+      h('dt', null, 'Webhook אחרון'), h('dd', { class: 'num' }, x.last_webhook || '—'),
+      h('dt', null, 'סך תשובות'), h('dd', { class: 'num' }, n(d.game.totals.replies)),
+      h('dt', null, 'סך פרסומים'), h('dd', { class: 'num' }, n(d.game.totals.posts))));
+  }
+
+  function banner(d) {
+    const el = document.getElementById('banner');
+    let msg = null, cls = 'bad';
+    if (!d.account.connected) msg = 'אינסטגרם לא מחובר – צריך להתחבר מחדש דרך ‎/auth/login';
+    else if (d.account.paused) { msg = 'הסוכן מושהה: לא נוצרות טיוטות ולא נשלח דבר. ‎/resume בטלגרם כדי להמשיך.'; cls = 'warn'; }
+    else if (d.health.poll_age_min != null && d.health.poll_age_min > 20) { msg = `הסנכרון מול אינסטגרם לא הצליח כבר ${d.health.poll_age_min} דקות.`; cls = 'warn'; }
+    else if (d.health.token_days != null && d.health.token_days <= 5) { msg = `הטוקן פג בעוד ${d.health.token_days} ימים.`; cls = 'warn'; }
+    el.className = 'banner' + (msg ? ' show ' + cls : '');
+    el.textContent = msg || '';
+  }
+
+  function render(d) {
+    banner(d);
+    document.getElementById('app').replaceChildren(
+      hero(d), missions(d), kpis(d),
+      h('div', { class: 'grid cols' },
+        h('div', { class: 'stack' }, pending(d), chart(d), campaigns(d), insights(d), posts(d)),
+        h('div', { class: 'stack' }, threads(d), scheduled(d), health(d))));
+    document.getElementById('foot').textContent = `עודכן ${d.generated_at} (שעון ישראל) · מתרענן כל 30 שניות · תצוגה בלבד – אישורים ושליחות נעשים בטלגרם`;
+  }
+
+  async function load() {
+    try {
+      const res = await fetch('data.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      render(await res.json());
+    } catch (e) {
+      const el = document.getElementById('banner');
+      el.className = 'banner show bad';
+      el.textContent = 'לא הצלחתי לטעון נתונים מהשרת. מנסה שוב…';
+    }
+  }
+  if (window.__DATA__) render(window.__DATA__); else { load(); setInterval(load, 30000); }
+})();
+</script>
+</body>
+</html>

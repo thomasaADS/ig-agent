@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { config, log, safeErr, UserError, formatLocal, humanDuration } from './config.js';
 import { db, setPaused } from './db.js';
 import * as ig from './instagram.js';
-import { getThread, threadMessages, windowRemaining, pendingDrafts, statusInfo, hasUserText } from './store.js';
+import { getThread, threadMessages, windowRemaining, pendingDrafts, statusInfo, hasUserText, updateLead, STAGES, parseTags } from './store.js';
+import * as campaigns from './campaigns.js';
+import * as stats from './stats.js';
 import * as agent from './agent.js';
 import * as inbox from './inbox.js';
 import * as media from './media.js';
@@ -78,6 +80,8 @@ tool('list_threads', 'Recent DM conversations, newest first.', { limit: z.number
         username: t.username,
         name: t.name,
         last_message: last ? { from: last.direction === 'out' ? 'me' : 'them', text: last.text, at: when(last.created_at) } : null,
+        stage: t.stage,
+        tags: parseTags(t),
         can_reply: windowRemaining(t) > 0,
         window_remaining: humanDuration(windowRemaining(t)),
       };
@@ -90,6 +94,9 @@ tool('get_thread', 'Full message history of one DM conversation.', { thread_id: 
   return {
     thread_id: t.id,
     username: t.username,
+    stage: t.stage,
+    tags: parseTags(t),
+    notes: t.notes,
     window_remaining: humanDuration(windowRemaining(t)),
     messages: threadMessages(t.id, limit).map((m) => ({ from: m.direction === 'out' ? 'me' : 'them', type: m.type, text: m.text, at: when(m.created_at) })),
   };
@@ -229,6 +236,78 @@ tool('style_report', 'How drafts ended up (sent as-is / edited / skipped / regen
     recent_edits: edits,
   };
 });
+
+// ---- leads ----
+tool(
+  'update_lead',
+  'Lead card for a conversation: stage, tags and free-text notes. Notes are given to the AI as trusted context for future drafts. stage "spam" silences the thread (no drafts, no notifications).',
+  { thread_id: z.string(), stage: z.enum(STAGES).optional(), tags: z.array(z.string()).optional(), notes: z.string().optional() },
+  ({ thread_id, ...patch }) => {
+    const t = updateLead(thread_id, patch);
+    if (!t) throw new UserError('השיחה לא נמצאה.');
+    return { thread_id: t.id, username: t.username, stage: t.stage, tags: parseTags(t), notes: t.notes };
+  },
+);
+
+// ---- insights ----
+tool('daily_summary', 'Activity for one day (Asia/Jerusalem): messages, replies, drafts, comments, posts, campaign DMs and clicks, plus what is waiting for the owner. day defaults to today, format YYYY-MM-DD.', { day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }, async ({ day }) => {
+  await stats.snapshotInsights({ maxAgeMs: 10 * 60_000 });
+  return { ...stats.dayStats(day), instagram: stats.getInsights(day || stats.dayOffset(0)), waiting_threads: stats.waitingThreads().length, pending_drafts: pendingDrafts().length };
+});
+
+tool('account_insights', 'Instagram account metrics for the last N days (reach, views, interactions, likes, saves, shares...) and follower history.', { days: z.number().int().min(1).max(30).default(7) }, async ({ days }) => ({
+  period_days: days,
+  totals: await ig.accountInsights(Date.now() - days * 86_400_000, Date.now()),
+  profile: await ig.profile(),
+  follower_history: stats.followerTrend(30),
+}));
+
+tool('media_insights', 'Performance of one post/reel/story (reach, views, likes, comments, shares, saves). Use ids from recent_media.', { media_id: z.string() }, async ({ media_id }) => ig.mediaInsights(media_id));
+
+tool('publish_limit', "How much of Instagram's rolling 24h publishing quota is used.", {}, async () => (await ig.publishingLimit()) ?? { result: 'unknown' });
+
+tool('hide_comment', 'Hide (or unhide) a comment on your post, e.g. spam. Reversible.', { comment_id: z.string(), hide: z.boolean().default(true) }, async ({ comment_id, hide }) => {
+  await ig.hideComment(comment_id, hide);
+  if (hide) {
+    db.prepare("UPDATE comments SET status = 'hidden' WHERE id = ?").run(comment_id);
+    await agent.closeCommentDrafts(comment_id);
+  }
+  return { comment_id, hidden: hide };
+});
+
+// ---- comment -> DM campaigns ----
+tool(
+  'create_campaign',
+  'Create a comment-to-DM campaign: whoever comments one of the keywords gets ONE private message with this exact text. The campaign starts as a draft and the owner must approve it with a button in Telegram - it cannot be activated from here. In dm_text use {username} for their name and {link} where the tracked link goes (appended at the end if omitted).',
+  {
+    name: z.string().min(1),
+    keywords: z.array(z.string().min(1)).min(1).max(20),
+    match: z.enum(['word', 'contains']).default('word').describe('word = the comment contains the keyword as a whole word; contains = anywhere in the text'),
+    dm_text: z.string().min(1).max(1000),
+    link_url: z.string().url().optional().describe('Destination URL; clicks are counted through a redirect on this server'),
+    media_id: z.string().optional().describe('Limit to one post (id from recent_media). Omit for all posts'),
+    public_reply: z.string().max(300).optional().describe('Optional public reply posted under the comment, e.g. "sent you a DM"'),
+  },
+  ({ name, keywords, match, dm_text, link_url, media_id, public_reply }) =>
+    campaigns.createCampaign({ name, keywords, match, dmText: dm_text, linkUrl: link_url, mediaId: media_id, publicReply: public_reply }),
+);
+
+tool('list_campaigns', 'Campaigns with status, sent / queued / failed counts, clicks and CTR.', {}, () => campaigns.listCampaigns());
+
+tool(
+  'set_campaign_status',
+  'Pause a campaign, resume one the owner already approved in Telegram, or delete it. A campaign that was never approved cannot be activated here.',
+  { id: z.number().int(), status: z.enum(['paused', 'active', 'deleted']) },
+  ({ id, status }) => {
+    const out = campaigns.setStatus(id, status);
+    if (status === 'active') campaigns.processQueue().catch(() => {});
+    return out;
+  },
+);
+
+tool('campaign_log', 'Latest sends of a campaign: who, sent / skipped / failed with the reason, and clicks.', { id: z.number().int(), limit: z.number().int().min(1).max(200).default(50) }, ({ id, limit }) =>
+  campaigns.sendLog(id, limit).map((r) => ({ ...r, created_at: when(r.created_at), sent_at: when(r.sent_at) })),
+);
 
 export const toolNames = () => TOOLS.map((t) => t.name);
 

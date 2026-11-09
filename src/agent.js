@@ -13,6 +13,7 @@ import {
   threadMessages,
   windowRemaining,
   hasUserText,
+  parseTags,
 } from './store.js';
 import * as tg from './telegram.js';
 
@@ -84,6 +85,7 @@ export async function recoverStuckSends() {
 
 export async function handleIncoming(threadId, msg) {
   if (msg.type === 'reaction') return; // stored, never drafted
+  if (getThread(threadId)?.stage === 'spam') return; // marked by the owner: store silently
   if (msg.type !== 'text') {
     const t = getThread(threadId);
     await tg.notify(`📎 ${tg.who(t)}: ${tg.esc(msg.text || '')}`);
@@ -141,7 +143,7 @@ export async function draftForThread(threadId, { previous, instruction, regenOf 
   const thread = getThread(threadId);
   const history = threadMessages(threadId, 30);
   const last = history.at(-1);
-  if (!thread || !last || last.direction !== 'in') return null;
+  if (!thread || !last || last.direction !== 'in' || thread.stage === 'spam') return null;
   if (windowRemaining(thread) <= 0) return null;
 
   // Only draft when the unanswered part contains real words.
@@ -156,6 +158,7 @@ export async function draftForThread(threadId, { previous, instruction, regenOf 
       kind: 'dm',
       username: thread.username,
       history: history.filter((m) => m.type !== 'reaction'),
+      lead: leadNotes(thread),
       previous,
       instruction,
     });
@@ -220,6 +223,15 @@ export async function draftForComment(commentId, { previous, instruction, regenO
   const fresh = getDraft(draft.id);
   if (fresh.status === 'pending') await tg.sendDraftCard(fresh);
   return fresh;
+}
+
+function leadNotes(thread) {
+  const parts = [];
+  if (thread.stage && thread.stage !== 'new') parts.push(`stage: ${thread.stage}`);
+  const tags = parseTags(thread);
+  if (tags.length) parts.push(`tags: ${tags.join(', ')}`);
+  if (thread.notes) parts.push(thread.notes);
+  return parts.join('\n') || undefined;
 }
 
 // ---------- auto-send guardrails ----------

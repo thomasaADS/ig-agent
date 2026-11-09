@@ -73,7 +73,7 @@ function variation({ previous, instruction }) {
 }
 
 /**
- * kind 'dm':      { username, history: [{direction, text, type}], previous?, instruction? }
+ * kind 'dm':      { username, history: [{direction, text, type}], lead?, previous?, instruction? }
  * kind 'comment': { username, text, caption, previous?, instruction? }
  * Returns reply text, or NEEDS_ME.
  */
@@ -92,6 +92,9 @@ export async function draftReply(input) {
       `Direct message conversation with @${esc(input.username || 'unknown')}. ` +
       `Write the owner's next reply to the latest messages from them.\n` +
       `<conversation>\n${lines}\n</conversation>`;
+    if (input.lead) {
+      prompt += `\n<owner_notes>\n${esc(input.lead)}\n</owner_notes>\nThe notes above were written by the owner about this person (trusted). Use them for context; do not quote them.`;
+    }
   }
   prompt += variation(input);
   try {

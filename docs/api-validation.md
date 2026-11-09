@@ -83,3 +83,26 @@ group by thread_id, text having count(*) > 1;
 - Do reactions open or extend the 24h window? The agent assumes they do not.
 - Comment webhooks: is `entry.time` in seconds (assumed) and is `parent_id`
   present on replies?
+
+---
+
+## 7. Insights ☐ (added in 1.1.0)
+- Requires the `instagram_business_manage_insights` permission on the app and a
+  fresh login. Run `account_insights` and `/today`.
+- Which account metrics does this account actually return? The code asks for
+  reach, views, accounts_engaged, total_interactions, likes, comments, shares,
+  saves, profile_links_taps and silently drops the ones Instagram rejects.
+- Does `GET /me?fields=followers_count` work (follower history depends on it)?
+- Does `GET /me/content_publishing_limit` return `quota_usage` / `config.quota_total`?
+- Result:
+
+## 8. Comment -> DM campaigns ☐ (added in 1.1.0)
+- Create a campaign, approve it in Telegram, comment the keyword from a second
+  account. Expected: one DM with the approved text; `/l/<token>` redirects and
+  the click shows in `list_campaigns`.
+- Confirm `POST /me/messages` with `recipient.comment_id` works with the
+  Instagram Login token (documented as needing `instagram_business_manage_comments`).
+- In Development mode, do private replies reach non-tester accounts?
+- Does the optional public reply post correctly under the comment?
+- `hide_comment`: confirm `POST /{comment-id}` with `hide=true`.
+- Result:

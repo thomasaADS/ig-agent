@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.1.0 - 2026-11-10
+
+Ideas taken from similar open-source projects (OpenReply, Pilot,
+AleemHaider/instagram-mcp), reimplemented here - no code was copied.
+
+### Added
+- **Comment -> DM campaigns** (`campaigns.js`): keyword in a comment triggers
+  one private reply with a fixed, owner-approved text and a click-tracked link
+  (`/l/<token>`). Draft until approved by a Telegram button (MCP cannot
+  activate an unapproved campaign), once per person, hourly cap with a queue,
+  7-day limit, no retries, per-campaign pause, covered by `/pause`.
+- **Read-only dashboard** at `/dash/<DASHBOARD_SECRET>/`: pending drafts,
+  conversations, 14-day chart, campaigns with CTR, scheduled posts, account
+  insights, health, plus level / streak / daily missions computed from real
+  activity. No actions, strict CSP, off when the secret is empty.
+- **Insights**: `instagram_business_manage_insights` scope, daily snapshots,
+  `account_insights`, `media_insights`, `daily_summary`; daily Telegram
+  summary and `/today`.
+- **Lead card**: stage, tags, notes per thread (`update_lead`), passed to the
+  model as trusted owner notes; `spam` silences a thread.
+- `hide_comment`, `publish_limit`, and a publishing-quota check before publish.
+- `/campaigns` command; GitHub Actions workflow running `npm test`.
+- MCP tools: 25 -> 35. Tests: 44 -> 55.
+
+### Changed
+- This reverses two items the original brief listed as out of scope, at the
+  owner's request: a web dashboard, and automated DMs (limited to people who
+  commented a campaign keyword).
+
+### Verified / not verified
+- `npm test` 55/55 with mocked network; dashboard rendered in Chromium at
+  desktop and phone widths with seeded demo data (no console errors, no
+  horizontal overflow).
+- Private-reply and insights request shapes were checked against Meta's
+  documentation only. **Still nothing has run against the real Instagram
+  API**; items 7-8 were added to `docs/api-validation.md`.
+
 ## 1.0.0 - 2026-11-09
 
 First complete build. The brief described finishing an existing codebase; that

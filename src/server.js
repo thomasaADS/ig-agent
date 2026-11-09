@@ -11,6 +11,8 @@ import * as telegram from './telegram.js';
 import * as scheduler from './scheduler.js';
 import { handleMcpRequest } from './mcp.js';
 import { statusInfo } from './store.js';
+import * as campaigns from './campaigns.js';
+import { dashboardRouter } from './dashboard.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -43,6 +45,16 @@ app.get('/health', (_req, res) => {
 
 // ---- uploaded media (Instagram downloads from here; names are unguessable) ----
 app.use('/media', express.static(config.mediaDir, { index: false, dotfiles: 'deny', maxAge: '1h' }));
+
+// ---- tracked campaign links ----
+app.get('/l/:token', (req, res) => {
+  const target = campaigns.resolveClick(req.params.token);
+  if (!target) return res.sendStatus(404);
+  res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').redirect(302, target);
+});
+
+// ---- read-only dashboard ----
+app.use('/dash', dashboardRouter);
 
 // ---- OAuth ----
 app.get('/auth/login', (_req, res) => {
@@ -103,6 +115,7 @@ export async function start() {
     inbox.startPolling();
     scheduler.startScheduler();
     await agent.recoverStuckSends().catch((e) => log('recover sends failed:', safeErr(e)));
+    campaigns.recoverInterrupted();
     const n = agent.recoverPending();
     if (n) log(`rescheduled drafts for ${n} thread(s) after restart`);
   }
