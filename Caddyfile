@@ -1,0 +1,9 @@
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy agent:3000
+
+	# Keep the MCP secret (it is part of the URL path) out of access logs.
+	log {
+		output discard
+	}
+}
