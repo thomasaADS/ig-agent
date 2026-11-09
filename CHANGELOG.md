@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.0 - 2026-11-10
+
+### Changed
+- Dashboard restyled to a minimalist look at the owner's request: light
+  background, hairline dividers instead of panels, one text colour, colour
+  used only as a signal (red = waiting for a reply), no gradients or emoji in
+  the chrome. Follows the device's light/dark setting.
+- Level, streak and points are now one quiet line in the header.
+- Same data, tabs, CRM board and drawer as 1.2.0; still read-only.
+
+### Verified
+- `npm test` 55/55; rendered in Chromium at 1280px and 390px with seeded demo
+  data: no console errors, no horizontal overflow.
+
 ## 1.2.0 - 2026-11-10
 
 ### Changed
