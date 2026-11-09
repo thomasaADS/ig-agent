@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.5.0 - 2026-11-10
+
+### Added
+- **NOVA**, an assistant inside the dashboard (`assistant.js`, floating orb
+  -> chat panel). It answers questions about the account through eight
+  read-only tools (overview, pending drafts, leads, one conversation, day
+  stats, trends, campaigns, content) and can draft text in the owner's voice.
+  It has no tool that sends, approves, publishes or edits, so the dashboard
+  stays read-only. Bounded tool loop (6 model calls), input and history caps,
+  30 questions per 10 minutes, stranger text treated as data.
+  Endpoint: `POST /dash/<secret>/assistant`.
+
+### Changed
+- Dashboard redesigned again, now futuristic: dark glass panels over a
+  generated aurora background, holographic gradient accents, an orb with a
+  level ring in the hero, glass-orb avatars, bundled Rubik font (OFL).
+  Replaces the 1.3/1.4 minimalist look. Same data and tabs.
+- Artwork regenerated with Higgsfield (background, orb, empty state).
+
+### Verified
+- `npm test` 59/59 (4 new assistant tests with a scripted model; one timing
+  flake in an older auto-send test fixed).
+- Rendered in Chromium at 1360px and 390px with seeded demo data: no console
+  errors, no failed requests, no horizontal overflow. The chat was exercised
+  in the browser against a canned reply - NOVA has not yet answered through
+  the real Anthropic API in this environment (no key here).
+
 ## 1.4.0 - 2026-11-10
 
 ### Changed

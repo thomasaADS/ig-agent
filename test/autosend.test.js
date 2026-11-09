@@ -17,6 +17,7 @@ const nextTs = () => (ts = Math.max(ts + 1, Date.now())); // always after anythi
 async function incoming(from, text) {
   route(new RegExp(`/${from}\\?`), () => ({ username: `name_${from}` }));
   route('/me/messages', () => ({ message_id: `sent-${Math.random()}` }));
+  await new Promise((r) => setTimeout(r, 3)); // strictly after the previous (auto-sent) reply
   await inbox.processWebhook(dmEvent({ from, text, ts: nextTs() }));
   await agent.flushDebounce();
   return db.prepare('SELECT * FROM drafts WHERE thread_id = ? ORDER BY id DESC').get(from);

@@ -12,6 +12,8 @@ import { statusInfo, getThread, threadMessages, windowRemaining, pendingDrafts, 
 import * as stats from './stats.js';
 import { listCampaigns } from './campaigns.js';
 import { listScheduled } from './scheduler.js';
+import { ask, ASSISTANT_NAME } from './assistant.js';
+import { UserError, log, safeErr } from './config.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const HTML_PATH = path.join(HERE, 'dashboard.html');
@@ -136,7 +138,7 @@ dashboardRouter.use('/:secret', (req, res, next) => {
     'X-Robots-Tag': 'noindex, nofollow',
     'Referrer-Policy': 'no-referrer',
     'X-Frame-Options': 'DENY',
-    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'",
+    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'",
   });
   next();
 });
@@ -145,6 +147,17 @@ dashboardRouter.use('/:secret', (req, res, next) => {
 dashboardRouter.use('/:secret/assets', express.static(path.join(HERE, 'assets'), { index: false, maxAge: '7d' }));
 
 dashboardRouter.get('/:secret/data.json', (_req, res) => res.json(dashboardData()));
+
+// NOVA, the in-dashboard assistant (read-only tools; see assistant.js).
+dashboardRouter.post('/:secret/assistant', express.json({ limit: '200kb' }), async (req, res) => {
+  try {
+    res.json({ name: ASSISTANT_NAME, ...(await ask(req.body?.messages)) });
+  } catch (e) {
+    if (e instanceof UserError) return res.status(429).json({ error: e.message });
+    log('assistant failed:', safeErr(e));
+    res.status(502).json({ error: 'העוזרת לא זמינה כרגע. נסה שוב בעוד רגע.' });
+  }
+});
 
 // One conversation for the lead drawer.
 dashboardRouter.get('/:secret/thread/:id.json', (req, res) => {
