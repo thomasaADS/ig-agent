@@ -106,6 +106,11 @@ test('tracked link counts clicks and redirects; unknown tokens are 404', async (
   assert.equal(data.account.username, 'ben');
   assert.equal(data.campaigns[0].sent, 1);
   assert.equal(data.series.length, 14);
+  const lead = data.leads.find((l) => l.who === 'dana' || l.id) ?? null;
+  assert.ok(Array.isArray(data.leads));
+  assert.equal((await get('/dash/wrong/thread/x.json')).statusCode, 404);
+  assert.equal((await get('/dash/dash-secret/thread/does-not-exist.json')).statusCode, 404);
+  void lead;
   assert.ok(data.game.level >= 1 && data.game.missions.length === 3);
   assert.equal(/access_token|"tok"|ig-secret|mcp-secret/.test(JSON.stringify(data)), false, 'no secrets in dashboard data');
 });
@@ -200,6 +205,16 @@ test('lead card: notes reach the prompt as trusted context, spam silences the th
   const prompt = callsTo('api.anthropic.com').at(-1).body.messages[0].content;
   assert.match(prompt, /<owner_notes>\nstage: customer\ntags: קורס\nקנתה את הקורס בינואר\n<\/owner_notes>/);
   assert.deepEqual((await mcp.callTool('get_thread', { thread_id: 'user-lead' })).tags, ['קורס']);
+
+  // The dashboard's CRM view shows the same lead card and its conversation.
+  const { dashboardData } = await import('../src/dashboard.js');
+  const card = dashboardData().leads.find((l) => l.id === 'user-lead');
+  assert.deepEqual([card.who, card.stage, card.tags, card.notes, card.msgs_in], ['lead_user', 'customer', ['קורס'], 'קנתה את הקורס בינואר', 1]);
+  const server = app.listen(0);
+  const thread = await new Promise((resolve) => http.get(`http://127.0.0.1:${server.address().port}/dash/dash-secret/thread/user-lead.json`, (r) => { let b = ''; r.on('data', (x) => (b += x)); r.on('end', () => resolve(JSON.parse(b))); }));
+  server.close();
+  assert.equal(thread.messages[0].text, 'היי');
+  assert.equal(thread.drafts.length, 1, 'pending draft is shown in the conversation');
 
   await mcp.callTool('update_lead', { thread_id: 'user-lead', stage: 'spam' });
   const drafted = callsTo('api.anthropic.com').length;

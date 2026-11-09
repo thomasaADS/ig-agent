@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.0 - 2026-11-10
+
+### Changed
+- Dashboard reorganised into three tabs: overview, leads (CRM), content and
+  campaigns.
+- New CRM view: funnel summary, pipeline board by stage (new / interested /
+  customer / VIP, optional spam column), lead cards with last message, tags,
+  notes marker and reply-window timer, people waiting for a reply highlighted
+  and sorted first, live search and a "waiting only" filter.
+- Lead drawer: full conversation as chat bubbles (AI-sent replies marked),
+  the owner's notes, message counts, reply window, and any pending draft.
+  Served by a new read-only `/dash/<secret>/thread/<id>.json`.
+- Still read-only: stage, tags and notes are changed through Claude
+  (`update_lead`).
+
+### Verified
+- `npm test` 55/55; rendered in Chromium at 1280px and 390px with seeded demo
+  data: no console errors, no horizontal overflow, search keeps focus across
+  refreshes, drawer opens and closes with Esc.
+
 ## 1.1.0 - 2026-11-10
 
 Ideas taken from similar open-source projects (OpenReply, Pilot,

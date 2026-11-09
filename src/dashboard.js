@@ -55,6 +55,37 @@ export function dashboardData() {
       };
     });
 
+  // CRM view: every conversation as a lead card.
+  const counts = Object.fromEntries(
+    db
+      .prepare("SELECT thread_id, SUM(direction = 'in') AS n_in, SUM(direction = 'out') AS n_out, MIN(created_at) AS first_at FROM messages WHERE type != 'reaction' GROUP BY thread_id")
+      .all()
+      .map((r) => [r.thread_id, r]),
+  );
+  const leads = db
+    .prepare('SELECT * FROM threads ORDER BY COALESCE(last_message_at, 0) DESC LIMIT 200')
+    .all()
+    .map((t) => {
+      const last = threadMessages(t.id, 1).at(-1);
+      const c = counts[t.id] || {};
+      return {
+        id: t.id,
+        who: t.username || t.name || t.id,
+        name: t.username && t.name ? t.name : null,
+        stage: t.stage,
+        tags: parseTags(t),
+        notes: clip(t.notes, 180),
+        last: clip(last?.text, 110),
+        from_me: last?.direction === 'out',
+        at: last ? formatLocal(last.created_at) : null,
+        waiting: last?.direction === 'in' && windowRemaining(t) > 0,
+        window_ms: Math.max(0, windowRemaining(t)),
+        msgs_in: c.n_in || 0,
+        msgs_out: c.n_out || 0,
+        first_at: c.first_at ? formatLocal(c.first_at).slice(0, 10) : null,
+      };
+    });
+
   const posts = db
     .prepare('SELECT * FROM media_cache ORDER BY COALESCE(timestamp, 0) DESC LIMIT 6')
     .all()
@@ -80,6 +111,7 @@ export function dashboardData() {
     pending,
     waiting_threads: stats.waitingThreads().length,
     threads,
+    leads,
     campaigns: listCampaigns().slice(0, 8),
     scheduled: listScheduled().slice(0, 8),
     unpublished_media: db.prepare("SELECT COUNT(*) AS n FROM media_files WHERE status = 'new'").get().n,
@@ -109,6 +141,23 @@ dashboardRouter.use('/:secret', (req, res, next) => {
 });
 
 dashboardRouter.get('/:secret/data.json', (_req, res) => res.json(dashboardData()));
+
+// One conversation for the lead drawer.
+dashboardRouter.get('/:secret/thread/:id.json', (req, res) => {
+  const t = getThread(req.params.id);
+  if (!t) return res.sendStatus(404);
+  res.json({
+    id: t.id,
+    who: t.username || t.name || t.id,
+    name: t.name,
+    stage: t.stage,
+    tags: parseTags(t),
+    notes: t.notes || '',
+    window_ms: Math.max(0, windowRemaining(t)),
+    messages: threadMessages(t.id, 60).map((m) => ({ me: m.direction === 'out', type: m.type, text: m.text || '', at: formatLocal(m.created_at), ai: m.source === 'agent' })),
+    drafts: db.prepare("SELECT id, text FROM drafts WHERE thread_id = ? AND status = 'pending'").all(t.id),
+  });
+});
 
 dashboardRouter.get('/:secret', (req, res) => {
   // Relative fetch("data.json") needs the trailing slash.
