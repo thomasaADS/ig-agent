@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.4.0 - 2026-11-10
+
+### Changed
+- Dashboard artwork generated with Higgsfield and bundled in `src/assets/`
+  (about 110 KB in total): a header illustration in light and dark variants,
+  an app icon / favicon, and an empty-state illustration. Served from
+  `/dash/<secret>/assets/` behind the same secret; CSP now allows `img-src
+  'self'`.
+- One warm accent colour taken from the artwork for the active tab, badges
+  and the progress line. Layout and data are unchanged; still read-only.
+
+### Verified
+- `npm test` 55/55; rendered in Chromium in light and dark mode at 1280px and
+  390px, plus a fresh install with no data: no failed requests, no console
+  errors, no horizontal overflow.
+
 ## 1.3.0 - 2026-11-10
 
 ### Changed

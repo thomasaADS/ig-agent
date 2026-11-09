@@ -6,18 +6,20 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
 <title>IG Agent</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
 <style>
   :root {
     --bg: #fafaf9; --surface: #ffffff; --line: #e9e8e6; --hover: #f3f2f0;
     --text: #141413; --muted: #6f6e6a; --dim: #a8a7a2;
-    --alert: #d4351c; --ok: #177a55; --warn: #a15c07;
-    --radius: 10px;
+    --alert: #d4351c; --ok: #177a55; --warn: #a15c07; --accent: #e0664f;
+    --radius: 10px; --art: url(assets/header-light.webp); --hero: #fcf9f5;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #111110; --surface: #191918; --line: #2a2a28; --hover: #20201f;
       --text: #f1f0ee; --muted: #a09f9a; --dim: #6b6a66;
-      --alert: #f0705a; --ok: #4cc497; --warn: #e0a64a;
+      --alert: #f0705a; --ok: #4cc497; --warn: #e0a64a; --accent: #f08a6e;
+      --art: url(assets/header-dark.webp); --hero: #0d0c0b;
     }
   }
   * { box-sizing: border-box; }
@@ -31,23 +33,31 @@
   :focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 4px; }
 
   /* header */
-  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .head { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 30px 30px 28px; min-height: 176px; border-radius: 18px; border: 1px solid var(--line); background: var(--hero); overflow: hidden; }
+  /* Generated artwork sits on the far (left) side and fades out before the text. */
+  .head::before { content: ""; position: absolute; inset: 0 auto 0 0; width: min(46%, 520px); background: var(--art) left center / cover no-repeat; -webkit-mask-image: linear-gradient(to right, #000 35%, transparent 100%); mask-image: linear-gradient(to right, #000 35%, transparent 100%); pointer-events: none; }
+  .head > * { position: relative; }
+  .ident { display: flex; align-items: center; gap: 16px; min-width: 0; }
+  .logo { width: 56px; height: 56px; border-radius: 16px; flex: none; object-fit: cover; box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 24px rgba(224, 102, 79, .18); }
+  .art-empty { display: flex; align-items: center; gap: 8px; padding: 6px 0; color: var(--muted); font-size: 14px; }
+  .art-empty img { width: 190px; height: auto; mix-blend-mode: multiply; filter: brightness(1.035) contrast(1.04); flex: none; }
+  @media (prefers-color-scheme: dark) { .art-empty img { display: none; } }
   .name { font-size: 26px; font-weight: 650; letter-spacing: -.01em; direction: ltr; unicode-bidi: isolate; line-height: 1.2; }
   .status { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; font-size: 13px; color: var(--muted); }
   .status span { display: inline-flex; align-items: center; gap: 6px; }
   .led { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
   .led.bad { background: var(--alert); } .led.warn { background: var(--warn); }
-  .progress { min-width: 220px; font-size: 13px; color: var(--muted); }
+  .progress { width: 260px; max-width: 100%; font-size: 13px; color: var(--muted); }
   .progress b { color: var(--text); font-weight: 600; }
   .track { height: 2px; background: var(--line); margin-top: 8px; }
-  .track i { display: block; height: 100%; background: var(--text); transition: width .5s ease; }
+  .track i { display: block; height: 100%; background: var(--accent); transition: width .5s ease; }
 
   /* tabs */
   .tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--line); margin: 30px 0 28px; }
   .tab { background: none; border: 0; padding: 0 0 12px; margin-bottom: -1px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-weight: 500; display: inline-flex; gap: 7px; align-items: baseline; }
   .tab:hover { color: var(--text); }
-  .tab.on { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
-  .tab .badge { font-size: 12px; color: var(--alert); font-weight: 600; }
+  .tab.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab .badge { font-size: 12px; color: var(--accent); font-weight: 600; }
 
   /* sections */
   section { margin-bottom: 40px; }
@@ -168,6 +178,7 @@
   @media (max-width: 600px) {
     .wrap { padding: 24px 16px 56px; }
     .name { font-size: 22px; } .progress { min-width: 0; width: 100%; }
+    .head { padding: 22px 20px 20px; min-height: 0; } .head::before { width: 42%; opacity: .7; } .logo { width: 46px; height: 46px; border-radius: 13px; }
     .tabs { gap: 20px; margin: 22px 0; }
     .kpis { grid-template-columns: repeat(2, 1fr); }
     .kpi { border-inline-start: 0 !important; padding-inline-start: 0 !important; border-top: 1px solid var(--line); }
@@ -216,6 +227,7 @@
   const stageTag = (k) => { const s = stageOf(k); return h('span', { class: 'stage', style: `--c:${s[2]}` }, h('i'), s[1]); };
   const state = { tab: location.hash.slice(1) || 'overview', q: '', waiting: false, spam: false, open: null, data: null };
 
+  const artEmpty = (text) => h('div', { class: 'art-empty' }, h('img', { src: 'assets/empty.webp', alt: '' }), h('span', null, text));
   const section = (title, count, ...body) => h('section', null, h('h2', null, title, count != null ? h('span', { class: 'count num' }, count) : null), ...body);
 
   // ---------- header ----------
@@ -223,13 +235,13 @@
     const g = d.game, a = d.account;
     const pct = Math.min(1, (g.xp - g.level_floor) / Math.max(1, g.level_next - g.level_floor));
     return h('div', { class: 'head' },
-      h('div', null,
+      h('div', { class: 'ident' }, h('img', { class: 'logo', src: 'assets/icon.webp', alt: '' }), h('div', { style: 'min-width:0' },
         h('div', { class: 'name' }, a.username ? '@' + a.username : 'IG Agent'),
         h('div', { class: 'status' },
           h('span', null, h('i', { class: 'led' + (a.connected ? '' : ' bad') }), a.connected ? 'מחובר' : 'לא מחובר'),
           h('span', null, h('i', { class: 'led' + (a.paused ? ' warn' : '') }), a.paused ? 'מושהה' : 'פעיל'),
           a.followers != null && h('span', null, h('span', { class: 'num' }, n(a.followers)), 'עוקבים'),
-          (d.health.auto_send_dm || d.health.auto_send_comments) && h('span', { style: 'color:var(--warn)' }, 'שליחה אוטומטית דולקת'))),
+          (d.health.auto_send_dm || d.health.auto_send_comments) && h('span', { style: 'color:var(--warn)' }, 'שליחה אוטומטית דולקת')))),
       h('div', { class: 'progress' },
         h('div', null, 'רמה ', h('b', { class: 'num' }, g.level), ' · ', h('b', { class: 'num' }, g.streak), g.streak === 1 ? ' יום ברצף' : ' ימים ברצף', ' · ', h('span', { class: 'num' }, `${n(g.xp)}/${n(g.level_next)}`)),
         h('div', { class: 'track' }, h('i', { style: `width:${Math.round(pct * 100)}%` }))));
@@ -272,7 +284,7 @@
         p.window_ms != null ? timer(p.window_ms) : h('span', { class: 'meta num' }, p.created.slice(5))),
       h('div', { class: 'quote' }, p.incoming || ''),
       h('div', { class: 'draft' }, p.draft)));
-    return section('מחכה לאישור שלך בטלגרם', d.pending.length, items.length ? items : h('div', { class: 'empty' }, 'אין טיוטות שמחכות.'));
+    return section('מחכה לאישור שלך בטלגרם', d.pending.length, items.length ? items : artEmpty('הכל טופל. אין טיוטות שמחכות לך.'));
   }
 
   function chart(d) {
@@ -390,7 +402,7 @@
       return b;
     };
     return h('div', null, funnel(d), h('div', { class: 'toolbar' }, search, toggle('רק מחכים לתשובה', 'waiting'), toggle('הצג ספאם', 'spam')),
-      d.leads.length ? board() : h('div', { class: 'empty' }, 'עוד אין שיחות. מי שיכתוב לך יופיע כאן.'),
+      d.leads.length ? board() : artEmpty('עוד אין שיחות. מי שיכתוב לך יופיע כאן.'),
       h('div', { class: 'hint' }, 'לשינוי שלב, תגיות או הערות מבקשים מ-Claude, למשל: "סמן את dana כלקוחה והוסף הערה".'));
   }
 

@@ -13,7 +13,8 @@ import * as stats from './stats.js';
 import { listCampaigns } from './campaigns.js';
 import { listScheduled } from './scheduler.js';
 
-const HTML_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'dashboard.html');
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const HTML_PATH = path.join(HERE, 'dashboard.html');
 const clip = (s, n) => (s && s.length > n ? `${s.slice(0, n)}…` : s || '');
 
 export function dashboardData() {
@@ -135,10 +136,13 @@ dashboardRouter.use('/:secret', (req, res, next) => {
     'X-Robots-Tag': 'noindex, nofollow',
     'Referrer-Policy': 'no-referrer',
     'X-Frame-Options': 'DENY',
-    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'",
+    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'",
   });
   next();
 });
+
+// Artwork (header backgrounds, icon, empty-state illustration).
+dashboardRouter.use('/:secret/assets', express.static(path.join(HERE, 'assets'), { index: false, maxAge: '7d' }));
 
 dashboardRouter.get('/:secret/data.json', (_req, res) => res.json(dashboardData()));
 
